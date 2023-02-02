@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PostRequest;
 use App\Post;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -10,6 +11,10 @@ use Illuminate\Support\Str;
 
 class PostController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth')->except('index', 'show');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -49,13 +54,13 @@ class PostController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
+    public function store(PostRequest $request)
     {
         $post = new Post();
         $post->title = $request->title;
         $post->short_title = Str::length($request->title)>30 ? Str::substr($request->title, 0, 30) . '...' : $request->title;
         $post->desc = $request->desc;
-        $post->author_id = rand(1, 4);
+        $post->author_id = \Auth::user()->id;
 
         if ($request->file('img')) {
             $path = Storage::putFile('public', $request->file('img'));
@@ -78,6 +83,10 @@ class PostController extends Controller
     {
         $post = Post::join('users', 'author_id', '=', 'users.id')
                 ->find($id);
+
+        if (!$post) {
+            return redirect()->route('post.index')->withErrors('Этого поста не существует.');
+        }
         return view('posts.show', compact('post'));
     }
 
@@ -85,11 +94,17 @@ class PostController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Http\Response|\Illuminate\View\View
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function edit($id)
     {
         $post = Post::find($id);
+        if ($post->author_id != \Auth::user()->id) {
+            return redirect()->route('post.index')->withErrors('У Вас недостаточно прав для редактирования этого поста.');
+        }
+        if (!$post) {
+            return redirect()->route('post.index')->withErrors('Этого поста не существует.');
+        }
         return view('posts.edit', compact('post'));
     }
 
@@ -100,9 +115,16 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Request $request, $id)
+    public function update(PostRequest $request, $id)
     {
         $post = Post::find($id);
+        if (!$post) {
+            return redirect()->route('post.index')->withErrors('Этого поста не существует.');
+        }
+        if ($post->author_id != \Auth::user()->id) {
+            return redirect()->route('post.index')->withErrors('У Вас недостаточно прав для редактирования этого поста.');
+        }
+
         $post->title = $request->title;
         $post->short_title = Str::length($request->title)>30 ? Str::substr($request->title, 0, 30) . '...' : $request->title;
         $post->desc = $request->desc;
@@ -127,6 +149,12 @@ class PostController extends Controller
     public function destroy($id)
     {
         $post = Post::find($id);
+        if (!$post) {
+            return redirect()->route('post.index')->withErrors('Этого поста не существует.');
+        }
+        if ($post->author_id != \Auth::user()->id) {
+        return redirect()->route('post.index')->withErrors('У Вас недостаточно прав для удаления этого поста.');
+        }
         $post->delete();
         return redirect()->route('post.index')->with('success', 'Пост успешно удален.');
     }

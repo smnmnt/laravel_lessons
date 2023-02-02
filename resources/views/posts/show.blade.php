@@ -15,13 +15,17 @@
                     <!-- /.card-author -->
                     <div class="card-btn">
                         <a href="{{ route('post.index') }}" class="btn btn-outline-primary">На главную</a>
-                        <a href="{{ route('post.edit', ['id' => $post->post_id]) }}" class="btn btn-outline-secondary">Редактировать</a>
-                        <form action="{{ route('post.destroy', ['id' => $post->post_id]) }}" method="post" onsubmit="if (confirm('Вы точно хотите удалить пост?')) { return true } else { return false }">
-                            @csrf
-                            @method('DELETE')
-                            <input type="submit" class="btn btn-outline-danger" value="Удалить">
-                        </form>
-                        <!-- /.btn -->
+                        @auth()
+                            @if(Auth::user()->id == $post->author_id)
+                                <a href="{{ route('post.edit', ['id' => $post->post_id]) }}" class="btn btn-outline-secondary">Редактировать</a>
+                                <form action="{{ route('post.destroy', ['id' => $post->post_id]) }}" method="post" onsubmit="if (confirm('Вы точно хотите удалить пост?')) { return true } else { return false }">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="submit" class="btn btn-outline-danger" value="Удалить">
+                                </form>
+                                <!-- /.btn -->
+                            @endif
+                        @endauth
                     </div>
                     <!-- /.card-btn -->
                 </div>
